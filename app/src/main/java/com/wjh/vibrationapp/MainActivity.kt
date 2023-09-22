@@ -25,10 +25,10 @@ import com.wjh.vibrationapp.ui.theme.VibrationAppTheme
 
 class MainActivity : ComponentActivity() {
 
-    private var countdownTimer: CountDownTimer? = null
     companion object {
         var shouldVibrate = true
     }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,15 +41,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+//    private fun setAlarm(minutes: Float) {
+//        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+//        val intent = Intent(this, AlarmReceiver::class.java)
+//        intent.putExtra("INTERVAL", minutes)
+//        val pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+//        alarmManager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + (minutes * 60 * 1000).toLong(), pendingIntent)
+//    }
+
     private fun setAlarm(minutes: Float) {
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(this, AlarmReceiver::class.java)
+        val intent = Intent(this, AlarmReceiver::class.java).apply {
+            putExtra("INTERVAL", minutes)
+        }
         val pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
 
-        // Cancel any existing alarm
+        // Cancel any existing alarms before setting a new one
         alarmManager.cancel(pendingIntent)
-
-        // Set the new alarm
         alarmManager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + (minutes * 60 * 1000).toLong(), pendingIntent)
     }
 
@@ -64,7 +72,7 @@ class MainActivity : ComponentActivity() {
         fun startCountdown(minutes: Float) {
             val totalTimeMillis = (minutes * 60 * 1000).toLong()
 
-            // Cancel any previously running timer
+            // Cancel any previously running timer (if you want to prevent multiple timers running at the same time)
             countdownTimer?.cancel()
 
             countdownTimer = object : CountDownTimer(totalTimeMillis, 1000) {
@@ -74,11 +82,10 @@ class MainActivity : ComponentActivity() {
 
                 override fun onFinish() {
                     countdownTime = 0
-                    // If you want the timer to restart automatically:
+                    // Restart the timer once it finishes
                     startCountdown(minutes)
                 }
-            }
-            countdownTimer?.start()
+            }.also { it.start() }
         }
         fun stopCountdown() {
             countdownTimer?.cancel()
@@ -137,6 +144,7 @@ class MainActivity : ComponentActivity() {
                 } else {
                     Text(text = "Timer is not running", fontSize = 18.sp) // Optional message when timer is not running
                 }
+
                 Button(onClick = {
                     shouldVibrate = false
                     stopCountdown()
@@ -166,7 +174,7 @@ class MainActivity : ComponentActivity() {
 
     class AlarmReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (MainActivity.shouldVibrate) {
+            if (shouldVibrate) {
                 val vibrator = context?.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
                 vibrator?.let {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -178,6 +186,8 @@ class MainActivity : ComponentActivity() {
                 }
                 val interval = intent?.getFloatExtra("INTERVAL", 1f) ?: 1f
                 setAlarm(context, interval)
+
+
             }
 
         }
@@ -189,6 +199,7 @@ class MainActivity : ComponentActivity() {
             val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
             alarmManager?.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + (minutes * 60 * 1000).toLong(), pendingIntent)
         }
+
     }
 }
 
